@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vigil · Inspection package</title>
+<link rel="stylesheet" href="assets/css/app.css">
+</head>
+<body>
+<script src="assets/data/demo-data.js"></script>
+<script src="assets/js/ui.js"></script>
+<script src="assets/js/app.js"></script>
+<script>
+(function(){
+  var c = Vigil.mount("inspect");
+  var D = Vigil.data;
+
+  var items = D.inspectionPackage.map(function(t,i){
+    return '<li class="clickable" data-i="'+i+'" style="cursor:pointer"><span class="chk">✓</span>'+t+'</li>';
+  }).join("");
+
+  c.innerHTML =
+    '<div class="section-h"><h2>Inspection package</h2><span class="sub">EMA · MHRA · национална агенция</span></div>'+
+    '<div class="card pad">'+
+      '<div class="inspect-cta">'+
+        '<div style="flex:1;min-width:240px">'+
+          '<h3 style="font-size:1.05rem;margin-bottom:6px">Генерирай пакет за инспекция с един бутон</h3>'+
+          '<p style="font-size:.85rem;color:var(--ink-soft)">Vigil сглобява актуалните snapshot-и на всичко по-долу в подписан zip с manifest от хешове. Готов за предоставяне в рамките на 7-дневния RFI прозорец.</p>'+
+        '</div>'+
+        '<button class="btn primary" id="btnGen" style="padding:12px 20px;font-size:.9rem">✦ Generate EMA Inspection Package</button>'+
+      '</div>'+
+      '<ul class="pkg-list" id="pkg">'+items+'</ul>'+
+      '<div id="pkgOut"></div>'+
+    '</div>'+
+    '<div class="empty-note">Това е същият pipeline като „Генерирай PDF" в PSMF, само с по-широк обхват. Кликни артефакт за детайл, или Ctrl+P за печат на изгледа.</div>';
+
+  document.getElementById("btnGen").addEventListener("click",function(){
+    UI.generate({ title:"Генериране на inspection package",
+      interval:480,
+      steps:["Събиране на PSMF v14…","Експорт на SOP matrix…","Training evidence…","CAPA + vendor log…","Хеширане и manifest…","Подписване на zip…","Готово"],
+      onDone:function(){
+        var ts=new Date().toLocaleString("bg-BG");
+        document.getElementById("pkgOut").innerHTML=
+          '<div class="snap-result">Пакетът е готов · <b>vigil-inspection-'+new Date().toISOString().slice(0,10)+'.zip</b><br>'+
+          '<span style="color:var(--ink-soft)">8 артефакта · manifest със SHA-256 · подписан '+ts+'</span></div>';
+        UI.toast("Inspection package готов","8 артефакта · подписан zip","ok");
+      }
+    });
+  });
+
+  document.querySelectorAll("#pkg li.clickable").forEach(function(li){
+    li.addEventListener("click",function(){
+      UI.toast(D.inspectionPackage[+li.dataset.i], "Актуален snapshot · хеширан", "info");
+    });
+  });
+})();
+</script>
+</body>
+</html>

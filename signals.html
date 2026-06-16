@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vigil · Signal review</title>
+<link rel="stylesheet" href="assets/css/app.css">
+</head>
+<body>
+<script src="assets/data/demo-data.js"></script>
+<script src="assets/js/ui.js"></script>
+<script src="assets/js/app.js"></script>
+<script>
+(function(){
+  var c = Vigil.mount("signals");
+  var D = Vigil.data, H = Vigil.helpers;
+  var signals = D.signals.map(function(s){ return Object.assign({},s); });
+
+  function renderRows(){
+    document.getElementById("sigbody").innerHTML = signals.map(function(s,i){
+      return '<tr class="clickable" data-i="'+i+'"><td>'+s.product+'</td><td>'+s.reaction+'</td>'+
+        '<td>'+H.due(s.trend)+'</td><td>'+H.tag(s.status)+'</td></tr>';
+    }).join("");
+    document.querySelectorAll("#sigbody tr.clickable").forEach(function(tr){
+      tr.addEventListener("click",function(){ openSignal(signals[+tr.dataset.i], +tr.dataset.i); });
+    });
+  }
+
+  c.innerHTML =
+    '<div class="section-h"><h2>Signal review</h2><span class="sub">benefit-risk overview · GVP Module IX</span></div>'+
+    '<div class="grid-2-even">'+
+      '<div class="card pad">'+
+        '<div class="card-h" style="padding:0 0 14px;border-bottom:1px solid var(--line)">'+
+          '<h3>Честота на реакции — Cardiq</h3><div class="spacer"></div><span class="tag-mini t-amber">за преглед</span></div>'+
+        '<svg viewBox="0 0 380 170" width="100%" style="margin-top:12px" role="img" aria-label="Графика на честота на реакции">'+
+          '<line x1="34" y1="140" x2="370" y2="140" stroke="#cfd6e2"/>'+
+          '<line x1="34" y1="20" x2="34" y2="140" stroke="#cfd6e2"/>'+
+          '<polyline fill="none" stroke="#b9700a" stroke-width="2.5" points="34,128 90,122 146,118 202,100 258,70 314,40 360,26"/>'+
+          '<circle cx="258" cy="70" r="3.5" fill="#b9700a"/>'+
+          '<circle cx="314" cy="40" r="3.5" fill="#b9700a"/>'+
+          '<circle cx="360" cy="26" r="4.5" fill="#a8261f"/>'+
+          '<text x="360" y="18" font-size="10" fill="#a8261f" text-anchor="end" font-family="monospace">204 / 3мес.</text>'+
+          '<text x="34" y="158" font-size="9" fill="#6b7689" font-family="monospace">март</text>'+
+          '<text x="360" y="158" font-size="9" fill="#6b7689" text-anchor="end" font-family="monospace">юни</text>'+
+        '</svg>'+
+        '<p style="font-size:.8rem;color:var(--ink-soft);margin-top:8px">Главоболие: 5 → 204 случая за 3 месеца. Превишава прага — препоръчва се разследване.</p>'+
+        '<button class="btn primary" id="btnInvest" style="margin-top:12px">Започни signal разследване</button>'+
+        '<div id="investOut"></div>'+
+      '</div>'+
+      '<div class="card"><div class="card-h"><h3>Текущи сигнали</h3></div>'+
+        '<table class="tbl"><thead><tr><th>Продукт</th><th>Реакция</th><th>Тренд</th><th>Статус</th></tr></thead>'+
+        '<tbody id="sigbody"></tbody></table>'+
+        '<div class="empty-note" style="margin:14px">Сигналната преценка остава експертна работа на QPPV — Vigil поднася агрегираните данни и праговете, не заменя клиничната оценка.</div>'+
+      '</div>'+
+    '</div>';
+
+  document.getElementById("btnInvest").addEventListener("click",function(){
+    UI.generate({ title:"Откриване на signal — Cardiq / Главоболие",
+      steps:["Извличане на свързани case-ове…","Disproportionality анализ (PRR)…","Литературна справка…","Подготовка на signal дос​ие…","Готово"],
+      onDone:function(){
+        signals[0].status={cls:"t-blue",txt:"в разследване"};
+        renderRows();
+        document.getElementById("investOut").innerHTML=
+          '<div class="snap-result">Signal досие отворено за <b>Cardiq / Главоболие</b>.<br>'+
+          '<span style="color:var(--ink-soft)">PRR = 4.2 · 204 случая · приоритет: висок. Назначен на QPPV за оценка.</span></div>';
+        UI.toast("Signal разследване стартирано","Cardiq / Главоболие · PRR 4.2","warn");
+      }
+    });
+  });
+
+  function openSignal(s,i){
+    UI.modal({ title:s.product+" — "+s.reaction,
+      body:'<div class="field"><label>Тренд</label><div>'+H.due(s.trend)+'</div></div>'+
+        '<div class="field"><label>Статус</label><div>'+H.tag(s.status)+'</div></div>'+
+        '<p style="font-size:.82rem;color:var(--ink-soft)">Агрегираните данни се поднасят на QPPV. Клиничната преценка остава човешка.</p>',
+      actions:[{label:"Затвори"},{label:"Маркирай прегледан",kind:"primary",onClick:function(close){
+        s.status={cls:"t-green",txt:"затворен"}; renderRows(); close();
+        UI.toast("Сигнал прегледан", s.product+" · "+s.reaction, "ok");
+      }}]
+    });
+  }
+
+  renderRows();
+})();
+</script>
+</body>
+</html>

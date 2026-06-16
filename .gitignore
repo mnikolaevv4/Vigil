@@ -1,0 +1,10 @@
+# OS
+.DS_Store
+Thumbs.db
+# Editor
+.vscode/
+.idea/
+*.swp
+# Node (ако някога добавиш build стъпка)
+node_modules/
+npm-debug.log*

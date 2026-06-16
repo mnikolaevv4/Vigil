@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vigil · Срокове & cases</title>
+<link rel="stylesheet" href="assets/css/app.css">
+</head>
+<body>
+<script src="assets/data/demo-data.js"></script>
+<script src="assets/js/ui.js"></script>
+<script src="assets/js/app.js"></script>
+<script>
+(function(){
+  var c = Vigil.mount("cases");
+  var D = Vigil.data, H = Vigil.helpers;
+
+  var rows = D.cases.map(function(r){ return Object.assign({}, r); });
+  var filter = "all";
+
+  function matches(r){
+    if(filter==="all") return true;
+    if(filter==="over") return r.due.cls==="over";
+    if(filter==="soon") return r.due.cls==="soon";
+    if(filter==="serious") return /serious|фатален/.test(r.sev.txt);
+    return true;
+  }
+  function rowHtml(r,idx){
+    return '<tr class="clickable" data-i="'+idx+'"><td class="mono">'+r.id+'</td><td>'+H.tag(r.sev)+'</td><td>'+r.rep+'</td>'+
+      '<td>'+r.src+'</td><td>'+H.whoCell(r.who,r.whoName)+'</td><td>'+H.due(r.due)+'</td><td>'+H.tag(r.status)+'</td></tr>';
+  }
+  function render(){
+    var body = rows.map(function(r,i){ return matches(r)?rowHtml(r,i):""; }).join("");
+    if(!body) body = '<tr><td colspan="7" style="color:var(--muted);text-align:center;padding:24px">Няма case-ове по този филтър.</td></tr>';
+    document.getElementById("casebody").innerHTML = body;
+    document.querySelectorAll("#casebody tr.clickable").forEach(function(tr){
+      tr.addEventListener("click",function(){ openDetail(rows[+tr.dataset.i]); });
+    });
+    document.getElementById("count").textContent = rows.filter(matches).length + " от " + rows.length;
+  }
+  function chips(){
+    var defs=[["all","Всички"],["over","Просрочени"],["soon","Под 7 дни"],["serious","Serious"]];
+    return '<div class="chips" id="chips">'+defs.map(function(d){
+      return '<span class="chip'+(filter===d[0]?" on":"")+'" data-f="'+d[0]+'">'+d[1]+'</span>';
+    }).join("")+'</div>';
+  }
+
+  c.innerHTML =
+    '<div class="section-h"><h2>Срокове & cases</h2><span class="sub">expedited reporting · GVP Module VI</span>'+
+      '<div class="spacer"></div><button class="btn" id="btnFilter">Филтър</button><button class="btn primary" id="btnNew">+ Нов case</button></div>'+
+    chips()+
+    '<div class="legend">'+
+      '<span><span class="dot r"></span>Просрочен</span>'+
+      '<span><span class="dot a"></span>Под 7 дни</span>'+
+      '<span><span class="dot g"></span>В график</span>'+
+      '<span style="margin-left:auto;font-family:var(--mono)" id="count"></span>'+
+    '</div>'+
+    '<div class="card" style="margin-top:14px"><table class="tbl">'+
+      '<thead><tr><th>Case ID</th><th>Сериозност</th><th>Тип отчет</th><th>Източник</th><th>Отговорник</th><th>Срок</th><th>Статус</th></tr></thead>'+
+      '<tbody id="casebody"></tbody></table></div>'+
+    '<div class="empty-note">Самото подаване остава в EVWEB (безплатния интерфейс на EMA) в ранна версия — Vigil следи сроковете, отговорниците и пази evidence за всяко подаване. Кликни ред за детайли.</div>';
+
+  c.querySelectorAll(".chip").forEach(function(ch){
+    ch.addEventListener("click",function(){ filter=ch.dataset.f; c.querySelectorAll(".chip").forEach(function(x){x.classList.toggle("on",x.dataset.f===filter);}); render(); });
+  });
+  document.getElementById("btnFilter").addEventListener("click",function(){
+    var ch=document.getElementById("chips"); ch.style.transition="background .2s"; ch.style.background="var(--blue-bg)";
+    setTimeout(function(){ch.style.background="";},500);
+    UI.toast("Филтри","Избери чип за бързо филтриране","info");
+  });
+  document.getElementById("btnNew").addEventListener("click",function(){
+    UI.modal({
+      title:"Нов case",
+      body:
+        '<div class="field"><label>Сериозност</label><select id="f-sev">'+
+          '<option value="serious">serious</option><option value="фатален">фатален</option><option value="non-serious">non-serious</option></select></div>'+
+        '<div class="field"><label>Тип отчет</label><select id="f-rep">'+
+          '<option>15-дневен ICSR</option><option>follow-up</option><option>90-дневен</option><option>ICSR</option></select></div>'+
+        '<div class="field-row">'+
+          '<div class="field"><label>Източник</label><select id="f-src"><option>пациент</option><option>лекар</option><option>аптека</option><option>CRO</option><option>литература</option><option>партньор</option></select></div>'+
+          '<div class="field"><label>Отговорник</label><select id="f-who"><option value="ИП|И. Петров">И. Петров</option><option value="КС|К. Стоев">К. Стоев</option><option value="МД|М. Димитрова">М. Димитрова</option></select></div>'+
+        '</div>'+
+        '<div class="field"><label>Дни до срок</label><input id="f-days" type="number" value="14"></div>',
+      actions:[
+        {label:"Отказ"},
+        {label:"Създай case",kind:"primary",onClick:function(close){
+          var sev=val("f-sev"), rep=val("f-rep"), src=val("f-src"), who=val("f-who").split("|"), days=parseInt(val("f-days"),10); if(isNaN(days))days=14;
+          var id="2026-0"+(424+(rows.length-7));
+          var dueCls = days<0?"over":(days<=7?"soon":"ok");
+          var dueTxt = days<0?days+" дни":(days===0?"днес":"+"+days+" дни");
+          var sevCls = /serious|фатален/.test(sev)?"t-red":"t-amber";
+          rows.push({ id:id, sev:{cls:sevCls,txt:sev}, rep:rep, src:src, who:who[0], whoName:who[1],
+            due:{cls:dueCls,txt:dueTxt}, status:{cls:"t-blue",txt:"нов"} });
+          filter="all"; c.querySelectorAll(".chip").forEach(function(x){x.classList.toggle("on",x.dataset.f==="all");});
+          render(); close();
+          UI.toast("Case създаден", id+" · "+sev, "ok");
+          UI.flashRow(document.querySelector('#casebody tr[data-i="'+(rows.length-1)+'"]'));
+        }}
+      ]
+    });
+  });
+  function val(id){ return document.getElementById(id).value; }
+
+  function openDetail(r){
+    UI.drawer({
+      title:"Case "+r.id,
+      body:
+        '<div class="field"><label>Сериозност</label><div>'+H.tag(r.sev)+'</div></div>'+
+        '<div class="field"><label>Тип отчет</label><div style="font-size:.88rem">'+r.rep+'</div></div>'+
+        '<div class="field"><label>Източник</label><div style="font-size:.88rem">'+r.src+'</div></div>'+
+        '<div class="field"><label>Отговорник</label>'+H.whoCell(r.who,r.whoName)+'</div>'+
+        '<div class="field"><label>Срок</label><div>'+H.due(r.due)+'</div></div>'+
+        '<div class="field"><label>Статус</label><div>'+H.tag(r.status)+'</div></div>'+
+        '<div style="display:flex;gap:10px;margin-top:18px">'+
+          '<button class="btn primary" id="dSubmit" style="flex:1;justify-content:center">Маркирай подаден</button>'+
+          '<button class="btn" id="dEvidence">Виж evidence</button>'+
+        '</div>',
+      onMount:function(ov,close){
+        ov.querySelector("#dSubmit").addEventListener("click",function(){
+          r.status={cls:"t-green",txt:"подаден"}; r.due={cls:"ok",txt:"завършен"};
+          render(); close();
+          UI.toast("Подаден към EudraVigilance", r.id+" · evidence записан", "ok");
+        });
+        ov.querySelector("#dEvidence").addEventListener("click",function(){
+          UI.toast("Evidence", "ACK-"+r.id+" · "+new Date().toLocaleDateString("bg-BG"), "info");
+        });
+      }
+    });
+  }
+  render();
+})();
+</script>
+</body>
+</html>

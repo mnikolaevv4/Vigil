@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vigil · SOP & обучения</title>
+<link rel="stylesheet" href="assets/css/app.css">
+</head>
+<body>
+<script src="assets/data/demo-data.js"></script>
+<script src="assets/js/ui.js"></script>
+<script src="assets/js/app.js"></script>
+<script>
+(function(){
+  var c = Vigil.mount("sops");
+  var D = Vigil.data, H = Vigil.helpers;
+
+  var sops = D.sops.map(function(s){ return Object.assign({},s); });
+  var training = D.training.map(function(t){ return Object.assign({},t); });
+
+  function renderSops(){
+    document.getElementById("sopbody").innerHTML = sops.map(function(s,i){
+      return '<tr class="clickable" data-i="'+i+'"><td class="mono">'+s.code+'</td><td>'+s.title+'</td><td class="mono">'+s.ver+'</td>'+
+        '<td>'+H.due(s.due)+'</td><td>'+H.tag(s.status)+'</td></tr>';
+    }).join("");
+    document.querySelectorAll("#sopbody tr.clickable").forEach(function(tr){
+      tr.addEventListener("click",function(){ openSop(sops[+tr.dataset.i], +tr.dataset.i); });
+    });
+  }
+  function renderTrain(){
+    document.getElementById("trainbody").innerHTML = training.map(function(t,i){
+      var btn = /подписано/.test(t.status.txt) ? '' :
+        '<button class="btn" data-sign="'+i+'" style="padding:4px 10px;font-size:.74rem">Подпиши</button>';
+      return '<tr><td>'+H.whoCell(t.who,t.whoName)+'</td><td class="mono">'+t.sop+'</td>'+
+        '<td>'+H.due(t.due)+'</td><td>'+H.tag(t.status)+' '+btn+'</td></tr>';
+    }).join("");
+    document.querySelectorAll("[data-sign]").forEach(function(b){
+      b.addEventListener("click",function(){
+        var i=+b.dataset.sign, t=training[i];
+        t.status={cls:"t-green",txt:"✓ подписано"}; t.due={cls:"ok",txt:"завършено"};
+        renderTrain();
+        UI.toast("Обучение подписано", t.whoName+" · "+t.sop+" · e-signature (21 CFR Part 11)", "ok");
+      });
+    });
+    var pend = training.filter(function(t){return !/подписано/.test(t.status.txt);}).length;
+    document.getElementById("pendTag").textContent = pend+" чакащи";
+  }
+
+  c.innerHTML =
+    '<div class="section-h"><h2>SOP & обучения</h2><span class="sub">document control · training matrix</span>'+
+      '<div class="spacer"></div><button class="btn primary" id="btnNewSop">+ Нов SOP</button></div>'+
+    '<div class="grid-2">'+
+      '<div class="card"><div class="card-h"><h3>Стандартни оперативни процедури</h3><div class="spacer"></div>'+
+        '<span class="crumb" style="font-size:.74rem">38 активни</span></div>'+
+        '<table class="tbl"><thead><tr><th>Код</th><th>Заглавие</th><th>Версия</th><th>Ревю</th><th>Статус</th></tr></thead>'+
+        '<tbody id="sopbody"></tbody></table></div>'+
+      '<div class="card"><div class="card-h"><h3>Training matrix</h3><div class="spacer"></div>'+
+        '<span class="tag-mini t-amber" id="pendTag"></span></div>'+
+        '<table class="tbl"><thead><tr><th>Служител</th><th>SOP</th><th>Краен срок</th><th>Статус</th></tr></thead>'+
+        '<tbody id="trainbody"></tbody></table>'+
+        '<div class="empty-note" style="margin:14px">Подписването генерира e-signature evidence (21 CFR Part 11), готово за инспекция.</div>'+
+      '</div>'+
+    '</div>';
+
+  document.getElementById("btnNewSop").addEventListener("click",function(){
+    UI.modal({ title:"Нов SOP",
+      body:'<div class="field"><label>Код</label><input id="s-code" value="SOP-0'+(40+sops.length)+'"></div>'+
+        '<div class="field"><label>Заглавие</label><input id="s-title" placeholder="напр. Управление на оплаквания"></div>'+
+        '<div class="field"><label>Дни до ревю</label><input id="s-days" type="number" value="365"></div>',
+      actions:[{label:"Отказ"},{label:"Създай",kind:"primary",onClick:function(close){
+        var code=document.getElementById("s-code").value, title=document.getElementById("s-title").value||"Без заглавие";
+        var days=parseInt(document.getElementById("s-days").value,10); if(isNaN(days))days=365;
+        sops.unshift({code:code,title:title,ver:"v1",due:{cls:days<=7?"soon":"ok",txt:"+"+days+" дни"},status:{cls:"t-blue",txt:"чернова"}});
+        renderSops(); close();
+        UI.toast("SOP създаден", code+" · v1 · чернова", "ok");
+        UI.flashRow(document.querySelector('#sopbody tr[data-i="0"]'));
+      }}]
+    });
+  });
+
+  function openSop(s,i){
+    UI.drawer({ title:s.code+" — "+s.title,
+      body:'<div class="field"><label>Версия</label><div class="mono">'+s.ver+'</div></div>'+
+        '<div class="field"><label>Ревю</label><div>'+H.due(s.due)+'</div></div>'+
+        '<div class="field"><label>Статус</label><div>'+H.tag(s.status)+'</div></div>'+
+        '<button class="btn primary" id="rev" style="width:100%;margin-top:12px;justify-content:center">Маркирай ревю-то като извършено</button>',
+      onMount:function(ov,close){
+        ov.querySelector("#rev").addEventListener("click",function(){
+          s.status={cls:"t-green",txt:"активен"}; s.due={cls:"ok",txt:"+365 дни"};
+          renderSops(); close();
+          UI.toast("Ревю извършено", s.code+" · нов срок +365 дни", "ok");
+        });
+      }
+    });
+  }
+
+  renderSops(); renderTrain();
+})();
+</script>
+</body>
+</html>

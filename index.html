@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vigil · Command Center</title>
+<link rel="stylesheet" href="assets/css/app.css">
+</head>
+<body>
+<script src="assets/data/demo-data.js"></script>
+<script src="assets/js/ui.js"></script>
+<script src="assets/js/app.js"></script>
+<script>
+(function(){
+  var c = Vigil.mount("index");
+  var D = Vigil.data, H = Vigil.helpers;
+
+  var pulseBars = D.pulse.lines.map(function(l,i){
+    return '<div class="barline" data-i="'+i+'" style="cursor:pointer"><span class="t">'+l.t+'</span>'+
+      '<span class="track"><i class="seg-'+l.seg+'" style="width:'+l.w+'%"></i></span>'+
+      '<span class="v">'+l.v+'</span></div>';
+  }).join("");
+
+  var kpiTargets=["#","cases.html","psmf.html","inspection.html"];
+  var kpis = D.kpis.map(function(k,i){
+    var tag = k.tag ? '<span class="tag-mini '+k.tag.cls+'">'+k.tag.txt+'</span>' : '';
+    return '<a class="kpi" href="'+kpiTargets[i]+'" style="cursor:pointer;display:block"><div class="k-top"><span class="k-lbl">'+k.lbl+'</span>'+tag+'</div>'+
+      '<div class="k-num" style="color:'+(k.color||'')+'">'+k.num+'</div>'+
+      '<div class="k-foot"><span class="dot '+k.dot+'"></span>'+k.foot+'</div></a>';
+  }).join("");
+
+  var attn = D.attention.map(function(r,i){
+    return '<tr class="clickable" data-i="'+i+'"><td>'+r.task+'</td><td>'+H.tag(r.type)+'</td>'+
+      '<td>'+H.whoCell(r.who,r.whoName)+'</td><td>'+H.due(r.due)+'</td></tr>';
+  }).join("");
+
+  var act = D.activity.map(function(a){
+    return '<div class="ti'+(a.act?' act':'')+'"><div class="tt">'+a.tt+'</div><div class="td">'+a.td+'</div></div>';
+  }).join("");
+
+  c.innerHTML =
+    '<div class="pulse"><div class="inner">'+
+      '<div class="score"><div class="n">'+D.pulse.score+'<span style="font-size:1.2rem;color:#9fb2d4">%</span></div>'+
+      '<div class="lbl">Compliance pulse</div></div>'+
+      '<div class="bars">'+pulseBars+'</div>'+
+    '</div></div>'+
+    '<div class="kpis">'+kpis+'</div>'+
+    '<div class="grid-2" style="margin-top:24px">'+
+      '<div class="card"><div class="card-h"><h3>Изискват внимание</h3><div class="spacer"></div>'+
+        '<a class="link" href="cases.html">Виж всички →</a></div>'+
+        '<table class="tbl"><thead><tr><th>Задача</th><th>Тип</th><th>Отговорник</th><th>Краен срок</th></tr></thead>'+
+        '<tbody id="attnbody">'+attn+'</tbody></table></div>'+
+      '<div class="card pad"><div class="card-h" style="padding:0 0 14px;border-bottom:1px solid var(--line)">'+
+        '<h3>Скорошна активност</h3></div>'+
+        '<div class="timeline" style="margin-top:14px">'+act+'</div></div>'+
+    '</div>'+
+    '<div class="empty-note">Демонстрационни данни. Кликни pulse линия, KPI плочка или ред за повече. Числата се събират от модулите PSMF, Cases, SOP и Vendor.</div>';
+
+  document.querySelectorAll(".pulse .barline").forEach(function(b){
+    b.addEventListener("click",function(){
+      var l=D.pulse.lines[+b.dataset.i];
+      UI.toast(l.t, "Текущо състояние: "+l.v, l.seg==="green"?"ok":(l.seg==="red"?"warn":"info"));
+    });
+  });
+  document.querySelectorAll("#attnbody tr.clickable").forEach(function(tr){
+    tr.addEventListener("click",function(){
+      var r=D.attention[+tr.dataset.i];
+      UI.modal({ title:"Задача", body:
+        '<p style="font-size:.9rem;margin-bottom:12px"><b>'+r.task+'</b></p>'+
+        '<div class="field"><label>Тип</label><div>'+H.tag(r.type)+'</div></div>'+
+        '<div class="field"><label>Отговорник</label>'+H.whoCell(r.who,r.whoName)+'</div>'+
+        '<div class="field"><label>Краен срок</label><div>'+H.due(r.due)+'</div></div>',
+        actions:[{label:"Затвори"},{label:"Отвори в cases",kind:"primary",onClick:function(close){close();location.href="cases.html";}}]
+      });
+    });
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vigil · Vendor oversight</title>
+<link rel="stylesheet" href="assets/css/app.css">
+</head>
+<body>
+<script src="assets/data/demo-data.js"></script>
+<script src="assets/js/ui.js"></script>
+<script src="assets/js/app.js"></script>
+<script>
+(function(){
+  var c = Vigil.mount("vendors");
+  var D = Vigil.data, H = Vigil.helpers;
+  var vendors = D.vendors.map(function(v){ return Object.assign({},v); });
+
+  function render(){
+    document.getElementById("vbody").innerHTML = vendors.map(function(v,i){
+      return '<tr class="clickable" data-i="'+i+'"><td>'+H.whoCell(v.who,v.name)+'</td><td>'+v.svc+'</td>'+
+        '<td class="mono">'+v.sdea+'</td><td class="mono">'+v.audit+'</td>'+
+        '<td>'+H.tag(v.capa)+'</td><td>'+H.due(v.kpi)+'</td><td>'+H.tag(v.status)+'</td></tr>';
+    }).join("");
+    document.querySelectorAll("#vbody tr.clickable").forEach(function(tr){
+      tr.addEventListener("click",function(){ openVendor(vendors[+tr.dataset.i], +tr.dataset.i); });
+    });
+  }
+
+  c.innerHTML =
+    '<div class="section-h"><h2>Vendor oversight</h2><span class="sub">CRO · call centers · дистрибутори · SDEA договори</span>'+
+      '<div class="spacer"></div><button class="btn primary" id="btnAdd">+ Vendor</button></div>'+
+    '<div class="card" style="margin-top:4px"><table class="tbl">'+
+      '<thead><tr><th>Vendor</th><th>Услуга</th><th>SDEA</th><th>Последен одит</th><th>Findings / CAPA</th><th>KPI</th><th>Статус</th></tr></thead>'+
+      '<tbody id="vbody"></tbody></table></div>'+
+    '<div class="empty-note">Всеки vendor е party по SDEA договор, версиониран през document control. Кликни ред за одит/CAPA действия.</div>';
+
+  document.getElementById("btnAdd").addEventListener("click",function(){
+    UI.modal({ title:"Нов vendor",
+      body:'<div class="field"><label>Име</label><input id="v-name" placeholder="напр. SafeData Ltd"></div>'+
+        '<div class="field"><label>Услуга</label><select id="v-svc"><option>Case processing</option><option>Call center intake</option><option>Литература</option><option>Дистрибуция</option></select></div>'+
+        '<div class="field"><label>SDEA номер</label><input id="v-sdea" value="SDEA-0'+(6+(vendors.length-4))+'"></div>',
+      actions:[{label:"Отказ"},{label:"Добави",kind:"primary",onClick:function(close){
+        var name=document.getElementById("v-name").value||"Нов vendor";
+        var init=name.trim().slice(0,2).toUpperCase();
+        vendors.push({who:init,name:name,svc:document.getElementById("v-svc").value,sdea:document.getElementById("v-sdea").value,
+          audit:"—",capa:{cls:"t-gray",txt:"—"},kpi:{cls:"ok",txt:"нов"},status:{cls:"t-blue",txt:"onboarding"}});
+        render(); close();
+        UI.toast("Vendor добавен", name+" · "+document.getElementById("v-svc").value, "ok");
+        UI.flashRow(document.querySelector('#vbody tr[data-i="'+(vendors.length-1)+'"]'));
+      }}]
+    });
+  });
+
+  function today(){ var d=new Date(); return d.toISOString().slice(0,10); }
+
+  function openVendor(v,i){
+    UI.drawer({ title:v.name,
+      body:'<div class="field"><label>Услуга</label><div style="font-size:.88rem">'+v.svc+'</div></div>'+
+        '<div class="field"><label>SDEA</label><div class="mono">'+v.sdea+'</div></div>'+
+        '<div class="field"><label>Последен одит</label><div class="mono">'+v.audit+'</div></div>'+
+        '<div class="field"><label>CAPA</label><div>'+H.tag(v.capa)+'</div></div>'+
+        '<div class="field"><label>KPI</label><div>'+H.due(v.kpi)+'</div></div>'+
+        '<div style="display:flex;gap:10px;margin-top:16px">'+
+          '<button class="btn primary" id="audit" style="flex:1;justify-content:center">Проведи одит</button>'+
+          '<button class="btn" id="capa">Затвори CAPA</button>'+
+        '</div>',
+      onMount:function(ov,close){
+        ov.querySelector("#audit").addEventListener("click",function(){
+          v.audit=today(); v.status={cls:"t-green",txt:"активен"}; v.kpi={cls:"ok",txt:"96%"};
+          render(); close();
+          UI.toast("Одит проведен", v.name+" · "+v.audit, "ok");
+        });
+        ov.querySelector("#capa").addEventListener("click",function(){
+          v.capa={cls:"t-green",txt:"0"};
+          render();
+          UI.toast("CAPA затворена", v.name+" · 0 отворени", "ok");
+          ov.querySelector(".drawer-b").querySelector(".field:nth-child(4) div").innerHTML=H.tag(v.capa);
+        });
+      }
+    });
+  }
+
+  render();
+})();
+</script>
+</body>
+</html>

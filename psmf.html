@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vigil · PSMF</title>
+<link rel="stylesheet" href="assets/css/app.css">
+</head>
+<body>
+<script src="assets/data/demo-data.js"></script>
+<script src="assets/js/ui.js"></script>
+<script src="assets/js/app.js"></script>
+<script>
+(function(){
+  var c = Vigil.mount("psmf");
+  var D = Vigil.data, H = Vigil.helpers;
+
+  var annexes = D.annexes.map(function(a,i){
+    return '<div class="annex clickable" data-i="'+i+'" style="cursor:pointer"><span class="code">'+a.code+'</span>'+
+      '<span class="nm">'+a.nm+'<small>'+a.sub+'</small></span>'+
+      '<span class="mini-track"><i class="'+(a.part?'part':'')+'" style="width:'+a.w+'%"></i></span>'+
+      H.tag(a.tag)+'</div>';
+  }).join("");
+
+  var versions = D.psmfVersions.map(function(v){
+    return '<div class="ti'+(v.act?' act':'')+'"><div class="tt">'+v.tt+'</div><div class="td">'+v.td+'</div></div>';
+  }).join("");
+
+  c.innerHTML =
+    '<div class="section-h"><h2>Pharmacovigilance System Master File</h2><span class="sub">територия: EU/EEA</span>'+
+      '<div class="spacer"></div><span class="tag-mini t-green" style="align-self:center">v14 · одобрен</span>'+
+      '<button class="btn" id="btnHist">История на версиите</button><button class="btn primary" id="btnPdf">Генерирай PDF</button></div>'+
+    '<div class="grid-2">'+
+      '<div class="card"><div class="card-h"><h3>Анекси A–I</h3><div class="spacer"></div>'+
+        '<span class="crumb" style="font-size:.74rem">актуалност на съдържанието</span></div>'+
+        '<div class="pad" style="padding-top:6px">'+annexes+'</div></div>'+
+      '<div class="card pad">'+
+        '<div class="card-h" style="padding:0 0 14px;border-bottom:1px solid var(--line)"><h3>Реконструкция по дата</h3></div>'+
+        '<p style="font-size:.82rem;color:var(--ink-soft);margin:14px 0">Всяка версия е замразен snapshot. Възпроизведи как е изглеждал PSMF на произволна дата — за RFI в рамките на 7 дни.</p>'+
+        '<input type="date" id="snapDate" value="2025-03-03" class="date-input" aria-label="Дата за snapshot">'+
+        '<button class="btn" id="btnSnap" style="width:100%;margin-top:10px;justify-content:center">Възстанови snapshot към датата</button>'+
+        '<div id="snapOut"></div>'+
+        '<div class="timeline" style="margin-top:20px">'+versions+'</div>'+
+      '</div>'+
+    '</div>';
+
+  document.getElementById("btnPdf").addEventListener("click",function(){
+    UI.generate({ title:"Генериране на PSMF v14 (PDF)",
+      steps:["Сглобяване на анекси A–I…","Изтегляне на референции…","Хеширане на документа…","Прилагане на e-signature…","Готово"],
+      onDone:function(){ UI.toast("PSMF v14 генериран","PDF · SHA-256 записан · подписан от М. Димитрова","ok"); }
+    });
+  });
+
+  document.getElementById("btnHist").addEventListener("click",function(){
+    UI.drawer({ title:"История на версиите",
+      body:'<div class="timeline">'+versions+'</div>'+
+        '<div class="empty-note" style="margin-top:14px">Всяка версия е immutable snapshot с content hash. Кликни „Възстанови" за реконструкция към дата.</div>'
+    });
+  });
+
+  document.getElementById("btnSnap").addEventListener("click",function(){
+    var d=document.getElementById("snapDate").value || "—";
+    // намери коя версия е била актуална към датата
+    var picked=null;
+    var order=[["2026-06-11","v14"],["2026-04-02","v13"],["2025-12-18","v12"],["2025-03-03","v9"]];
+    for(var i=0;i<order.length;i++){ if(d>=order[i][0]){ picked=order[i][1]; break; } }
+    if(!picked) picked="преди v9";
+    var out=document.getElementById("snapOut");
+    out.innerHTML='<div class="snap-result">Към <b>'+d+'</b> актуалната версия е <b>'+picked+'</b>.<br>'+
+      '<span style="color:var(--ink-soft)">Реконструиран snapshot · 9 анекса · content hash потвърден.</span></div>';
+    UI.toast("Snapshot реконструиран", d+" → "+picked, "info");
+  });
+
+  document.querySelectorAll(".annex.clickable").forEach(function(el){
+    el.addEventListener("click",function(){
+      var a=D.annexes[+el.dataset.i];
+      UI.modal({ title:"Анекс "+a.code+" — "+a.nm,
+        body:'<div class="field"><label>Съдържание</label><div style="font-size:.88rem">'+a.sub+'</div></div>'+
+          '<div class="field"><label>Актуалност</label><div class="mini-track" style="width:100%"><i class="'+(a.part?"part":"")+'" style="width:'+a.w+'%"></i></div></div>'+
+          '<div class="field"><label>Статус</label><div>'+H.tag(a.tag)+'</div></div>',
+        actions:[{label:"Затвори"},{label:"Отвори за редакция",kind:"primary",onClick:function(close){close();UI.toast("Анекс "+a.code,"Отворен за редакция (демо)","info");}}]
+      });
+    });
+  });
+})();
+</script>
+</body>
+</html>

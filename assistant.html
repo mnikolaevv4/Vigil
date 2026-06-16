@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vigil · QPPV Assistant</title>
+<link rel="stylesheet" href="assets/css/app.css">
+</head>
+<body>
+<script src="assets/data/demo-data.js"></script>
+<script src="assets/js/ui.js"></script>
+<script src="assets/js/app.js"></script>
+<script>
+(function(){
+  var c = Vigil.mount("assistant");
+
+  c.innerHTML =
+    '<div class="section-h"><h2>QPPV Assistant</h2>'+
+      '<span class="sub">RAG върху твоите PSMF, SOP и договори · човек одобрява, AI предлага</span></div>'+
+    '<div class="card pad" style="max-width:760px">'+
+      '<div id="thread">'+
+        '<div class="chat-row me"><div class="who-cell"><span class="av" style="background:var(--ink);color:#fff">?</span></div>'+
+          '<div class="bubble q">Кои SOP-и изтичат през следващите 30 дни и кой не е обучен по тях?</div></div>'+
+        '<div class="chat-row"><div class="who-cell"><span class="av" style="background:linear-gradient(150deg,#3f6fd6,#1b2f55);color:#fff">V</span></div>'+
+          '<div class="bubble a">Два SOP-а изтичат до 30 дни:<br>'+
+          '• <b>SOP-014</b> (Обработка на ICSR) — ревю до 17 юни. Чакащо обучение: К. Стоев.<br>'+
+          '• <b>SOP-031</b> (Vendor oversight) — ревюто е <b>просрочено с 4 дни</b>.'+
+          '<span style="display:block;margin-top:8px;font-size:.76rem;color:var(--ink-soft)">Източник: SOP-014 v6 · SOP-031 v2 · training matrix.</span></div></div>'+
+      '</div>'+
+      '<div class="chat-input"><input id="q" placeholder="Питай за PSMF, отговорности, срокове, одити…" aria-label="Въпрос">'+
+        '<button class="btn primary" style="padding:7px 14px" id="ask">Питай</button></div>'+
+      '<div class="empty-note">Всеки отговор цитира източника и неговата версия. Asistant-ът не подава и не одобрява нищо сам — само намира и обобщава.</div>'+
+    '</div>';
+
+  // Лека демо-логика: разпознава няколко ключови думи от демо-данните.
+  var D = Vigil.data;
+  function answer(q){
+    q = q.toLowerCase();
+    if(/vendor|одит|cro|подизпълнител/.test(q)){
+      var bad = D.vendors.filter(function(v){return /отворен/.test(v.capa.txt) || v.status.txt==="одит дължим";});
+      return bad.map(function(v){return "• <b>"+v.name+"</b> — "+v.capa.txt+", статус: "+v.status.txt+".";}).join("<br>")
+        +'<span style="display:block;margin-top:8px;font-size:.76rem;color:var(--ink-soft)">Източник: Vendor oversight.</span>';
+    }
+    if(/просрочен|overdue|срок|case/.test(q)){
+      var over = D.cases.filter(function(r){return r.status.txt==="просрочен" || r.due.cls==="over";});
+      return "Просрочени/критични днес: <b>"+over.length+"</b>.<br>"+
+        over.map(function(r){return "• "+r.id+" ("+r.sev.txt+") — "+r.due.txt;}).join("<br>")
+        +'<span style="display:block;margin-top:8px;font-size:.76rem;color:var(--ink-soft)">Източник: Срокове & cases.</span>';
+    }
+    if(/qppv|отговор|кой/.test(q)){
+      return "QPPV: <b>"+D.qppv.name+"</b> ("+D.qppv.role+"), deputy: "+D.qppv.deputy+
+        ". Достъпен 24/7 като контакт за регулаторните органи."+
+        '<span style="display:block;margin-top:8px;font-size:.76rem;color:var(--ink-soft)">Източник: PSMF анекс A.</span>';
+    }
+    return "Това е демо. В реалния продукт отговорът идва от RAG върху твоите документи, с цитат и версия. Опитай с vendor, просрочени или кой е QPPV.";
+  }
+
+  var thread = document.getElementById("thread");
+  var input = document.getElementById("q");
+  function send(){
+    var v = input.value.trim(); if(!v) return;
+    thread.insertAdjacentHTML("beforeend",
+      '<div class="chat-row me"><div class="who-cell"><span class="av" style="background:var(--ink);color:#fff">?</span></div>'+
+      '<div class="bubble q">'+v.replace(/</g,"&lt;")+'</div></div>');
+    thread.insertAdjacentHTML("beforeend",
+      '<div class="chat-row"><div class="who-cell"><span class="av" style="background:linear-gradient(150deg,#3f6fd6,#1b2f55);color:#fff">V</span></div>'+
+      '<div class="bubble a">'+answer(v)+'</div></div>');
+    input.value=""; input.focus();
+    thread.scrollIntoView({block:"end"});
+  }
+  document.getElementById("ask").addEventListener("click",send);
+  input.addEventListener("keydown",function(e){if(e.key==="Enter")send();});
+})();
+</script>
+</body>
+</html>
