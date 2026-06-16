@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vigil · Периодични доклади</title>
+<link rel="stylesheet" href="assets/css/app.css">
+</head>
+<body>
+<script src="assets/data/demo-data.js"></script>
+<script src="assets/js/ui.js"></script>
+<script src="assets/js/app.js"></script>
+<script>
+(function(){
+  var c = Vigil.mount("psur");
+  var D = Vigil.data, H = Vigil.helpers;
+
+  var rows = D.psurs.map(function(p){ return Object.assign({}, p); });
+  var filter = "all";
+
+  function matches(p){
+    if(filter==="all") return true;
+    if(filter==="due") return p.due.cls==="over" || p.due.cls==="soon";
+    if(filter==="draft") return p.status.txt==="не стартиран";
+    if(filter==="done") return p.status.cls==="t-green";
+    return true;
+  }
+  function rowHtml(p,idx){
+    return '<tr class="clickable" data-i="'+idx+'"><td>'+p.product+'</td><td>'+p.freq+'</td><td class="mono">'+p.dlp+'</td>'+
+      '<td>'+H.due(p.due)+'</td><td>'+H.whoCell(p.who,p.whoName)+'</td><td>'+H.tag(p.status)+'</td></tr>';
+  }
+  function render(){
+    var body = rows.map(function(p,i){ return matches(p)?rowHtml(p,i):""; }).join("");
+    if(!body) body = '<tr><td colspan="6" style="color:var(--muted);text-align:center;padding:24px">Няма цикли по този филтър.</td></tr>';
+    document.getElementById("psurbody").innerHTML = body;
+    document.querySelectorAll("#psurbody tr.clickable").forEach(function(tr){
+      tr.addEventListener("click",function(){ openDetail(rows[+tr.dataset.i]); });
+    });
+    document.getElementById("count").textContent = rows.filter(matches).length + " от " + rows.length;
+  }
+  function chips(){
+    var defs=[["all","Всички"],["due","Предстоящи ≤30 дни"],["draft","Не стартирани"],["done","Подадени/одобрени"]];
+    return '<div class="chips" id="chips">'+defs.map(function(d){
+      return '<span class="chip'+(filter===d[0]?" on":"")+'" data-f="'+d[0]+'">'+d[1]+'</span>';
+    }).join("")+'</div>';
+  }
+
+  c.innerHTML =
+    '<div class="section-h"><h2>Периодични доклади</h2><span class="sub">PSUR/PBRER · EURD list график</span>'+
+      '<div class="spacer"></div><button class="btn primary" id="btnNew">+ Нов цикъл</button></div>'+
+    chips()+
+    '<div class="legend">'+
+      '<span><span class="dot r"></span>Просрочен</span>'+
+      '<span><span class="dot a"></span>Под 30 дни</span>'+
+      '<span><span class="dot g"></span>В график</span>'+
+      '<span style="margin-left:auto;font-family:var(--mono)" id="count"></span>'+
+    '</div>'+
+    '<div class="card" style="margin-top:14px"><table class="tbl">'+
+      '<thead><tr><th>Продукт</th><th>Честота (EURD)</th><th>Data Lock Point</th><th>Срок за подаване</th><th>Автор</th><th>Статус</th></tr></thead>'+
+      '<tbody id="psurbody"></tbody></table></div>'+
+    '<div class="empty-note">Графикът следва EURD list честотата на продукта. Подаването остава през EudraVigilance / PSUR repository — Vigil следи DLP, срока и QC статуса. Кликни ред за детайли.</div>';
+
+  c.querySelectorAll(".chip").forEach(function(ch){
+    ch.addEventListener("click",function(){ filter=ch.dataset.f; c.querySelectorAll(".chip").forEach(function(x){x.classList.toggle("on",x.dataset.f===filter);}); render(); });
+  });
+
+  document.getElementById("btnNew").addEventListener("click",function(){
+    UI.modal({
+      title:"Нов PSUR цикъл",
+      body:
+        '<div class="field"><label>Продукт</label><input id="p-prod" placeholder="напр. Tensara"></div>'+
+        '<div class="field"><label>Честота (EURD)</label><select id="p-freq">'+
+          '<option>годишен (EURD)</option><option>на 3 години</option><option>на 5 години</option></select></div>'+
+        '<div class="field-row">'+
+          '<div class="field"><label>Data Lock Point</label><input id="p-dlp" type="date" value="2026-06-16"></div>'+
+          '<div class="field"><label>Дни до срок</label><input id="p-days" type="number" value="90"></div>'+
+        '</div>'+
+        '<div class="field"><label>Автор</label><select id="p-who"><option value="ИП|И. Петров">И. Петров</option><option value="КС|К. Стоев">К. Стоев</option><option value="МД|М. Димитрова">М. Димитрова</option></select></div>',
+      actions:[
+        {label:"Отказ"},
+        {label:"Създай",kind:"primary",onClick:function(close){
+          var prod=val("p-prod")||"Нов продукт", freq=val("p-freq"), dlp=val("p-dlp"), days=parseInt(val("p-days"),10); if(isNaN(days))days=90;
+          var who=val("p-who").split("|");
+          var dueCls = days<0?"over":(days<=30?"soon":"ok");
+          var dueTxt = days<0?days+" дни":(days===0?"днес":"+"+days+" дни");
+          rows.unshift({ product:prod, freq:freq, dlp:dlp, due:{cls:dueCls,txt:dueTxt}, status:{cls:"t-gray",txt:"не стартиран"}, who:who[0], whoName:who[1] });
+          filter="all"; c.querySelectorAll(".chip").forEach(function(x){x.classList.toggle("on",x.dataset.f==="all");});
+          render(); close();
+          UI.toast("PSUR цикъл създаден", prod+" · "+freq, "ok");
+          UI.flashRow(document.querySelector('#psurbody tr[data-i="0"]'));
+        }}
+      ]
+    });
+  });
+  function val(id){ return document.getElementById(id).value; }
+
+  function openDetail(p){
+    UI.drawer({
+      title:p.product+" — PSUR/PBRER",
+      body:
+        '<div class="field"><label>Честота (EURD)</label><div style="font-size:.88rem">'+p.freq+'</div></div>'+
+        '<div class="field"><label>Data Lock Point</label><div class="mono">'+p.dlp+'</div></div>'+
+        '<div class="field"><label>Срок за подаване</label><div>'+H.due(p.due)+'</div></div>'+
+        '<div class="field"><label>Автор</label>'+H.whoCell(p.who,p.whoName)+'</div>'+
+        '<div class="field"><label>Статус</label><div>'+H.tag(p.status)+'</div></div>'+
+        '<div style="display:flex;gap:10px;margin-top:18px">'+
+          '<button class="btn primary" id="dSubmit" style="flex:1;justify-content:center">Маркирай подаден</button>'+
+        '</div>',
+      onMount:function(ov,close){
+        ov.querySelector("#dSubmit").addEventListener("click",function(){
+          p.status={cls:"t-green",txt:"одобрен"}; p.due={cls:"ok",txt:"подаден"};
+          render(); close();
+          UI.toast("PSUR подаден", p.product+" · evidence записан", "ok");
+        });
+      }
+    });
+  }
+
+  render();
+})();
+</script>
+</body>
+</html>

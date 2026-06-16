@@ -127,6 +127,59 @@
       tr.classList.add("row-flash");
       tr.scrollIntoView({ block: "center", behavior: "smooth" });
       setTimeout(function () { tr.classList.remove("row-flash"); }, 1100);
+    },
+
+    /* ---- inline SVG line chart: {values, width, height, color, suffix, aria} ---- */
+    sparkline: function (opts) {
+      var W = opts.width || 380, H = opts.height || 170, vals = opts.values || [];
+      var left = 34, right = W - 10, top = 20, bottom = H - 30;
+      var min = opts.min != null ? opts.min : Math.min.apply(null, vals);
+      var max = opts.max != null ? opts.max : Math.max.apply(null, vals);
+      if (min === max) { min -= 1; max += 1; }
+      var n = vals.length, stepX = (right - left) / (n - 1);
+      function x(i) { return left + i * stepX; }
+      function y(v) { return bottom - ((v - min) / (max - min)) * (bottom - top); }
+      var pts = vals.map(function (v, i) { return x(i).toFixed(1) + "," + y(v).toFixed(1); }).join(" ");
+      var color = opts.color || "#234ed8";
+      var lastX = x(n - 1), lastY = y(vals[n - 1]);
+      return '<svg viewBox="0 0 ' + W + ' ' + H + '" width="100%" role="img" aria-label="' + (opts.aria || "графика") + '">' +
+        '<line x1="' + left + '" y1="' + bottom + '" x2="' + right + '" y2="' + bottom + '" stroke="#cfd6e2"/>' +
+        '<line x1="' + left + '" y1="' + top + '" x2="' + left + '" y2="' + bottom + '" stroke="#cfd6e2"/>' +
+        '<polyline fill="none" stroke="' + color + '" stroke-width="2.5" points="' + pts + '"/>' +
+        '<circle cx="' + lastX.toFixed(1) + '" cy="' + lastY.toFixed(1) + '" r="4" fill="' + color + '"/>' +
+        (opts.labelLeft ? '<text x="' + left + '" y="' + (H - 10) + '" font-size="9" fill="#6b7689" font-family="monospace">' + opts.labelLeft + '</text>' : "") +
+        (opts.labelRight ? '<text x="' + right + '" y="' + (H - 10) + '" font-size="9" fill="#6b7689" text-anchor="end" font-family="monospace">' + opts.labelRight + '</text>' : "") +
+        '<text x="' + lastX.toFixed(1) + '" y="' + (lastY - 8).toFixed(1) + '" font-size="10" fill="' + color + '" text-anchor="end" font-family="monospace">' + vals[n - 1] + (opts.suffix || "") + '</text>' +
+        '</svg>';
+    },
+
+    /* ---- inline SVG (stacked) bar chart: {categories, series:[{name,color,values}], width, height} ---- */
+    barsChart: function (opts) {
+      var W = opts.width || 380, H = opts.height || 170;
+      var left = 30, right = W - 10, top = 20, bottom = H - 30;
+      var cats = opts.categories || [], n = cats.length, series = opts.series || [];
+      var totals = cats.map(function (_, i) { return series.reduce(function (s, se) { return s + (se.values[i] || 0); }, 0); });
+      var max = opts.max || Math.max.apply(null, totals) || 1;
+      var gap = (right - left) / n, bw = gap * 0.6;
+      var bars = "";
+      for (var i = 0; i < n; i++) {
+        var x0 = left + i * gap + (gap - bw) / 2, yCursor = bottom;
+        for (var s = 0; s < series.length; s++) {
+          var v = series[s].values[i] || 0;
+          var h = (v / max) * (bottom - top);
+          yCursor -= h;
+          bars += '<rect x="' + x0.toFixed(1) + '" y="' + yCursor.toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + h.toFixed(1) + '" fill="' + series[s].color + '" rx="2"/>';
+        }
+      }
+      var axisLabels = cats.map(function (cat, i) {
+        if (n > 8 && i % 2 !== 0) return "";
+        var x0 = left + i * gap + gap / 2;
+        return '<text x="' + x0.toFixed(1) + '" y="' + (H - 10) + '" font-size="8" fill="#6b7689" text-anchor="middle" font-family="monospace">' + cat + '</text>';
+      }).join("");
+      return '<svg viewBox="0 0 ' + W + ' ' + H + '" width="100%" role="img" aria-label="' + (opts.aria || "графика") + '">' +
+        '<line x1="' + left + '" y1="' + bottom + '" x2="' + right + '" y2="' + bottom + '" stroke="#cfd6e2"/>' +
+        bars + axisLabels +
+        '</svg>';
     }
   };
 

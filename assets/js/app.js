@@ -16,24 +16,31 @@
     { id: "index",     file: "index.html",                  ic: "▣", label: "Command Center" },
     { id: "cases",     file: "cases.html",                  ic: "◷", label: "Срокове & cases",  badge: { txt: "3", red: true } },
     { id: "signals",   file: "signals.html",                ic: "∿", label: "Signal review",    badge: { txt: "2" } },
+    { id: "psur",      file: "psur.html",                   ic: "▥", label: "Периодични доклади", badge: { txt: "1" } },
     { group: "Документация" },
     { id: "psmf",      file: "psmf.html",                   ic: "▤", label: "PSMF" },
     { id: "sops",      file: "sops.html",                   ic: "≣", label: "SOP & обучения",   badge: { txt: "5" } },
     { id: "vendors",   file: "vendors.html",                ic: "⇄", label: "Vendor oversight" },
     { group: "Готовност" },
+    { id: "audits",    file: "audits.html",                 ic: "◎", label: "Самоинспекции & CAPA", badge: { txt: "3", red: true } },
     { id: "inspect",   file: "inspection.html",             ic: "✦", label: "Inspection package" },
-    { id: "assistant", file: "assistant.html",              ic: "✎", label: "QPPV Assistant" }
+    { id: "assistant", file: "assistant.html",              ic: "✎", label: "QPPV Assistant" },
+    { group: "Анализи" },
+    { id: "analytics", file: "analytics.html",              ic: "▨", label: "Анализи" }
   ];
 
   var TITLES = {
     index:     ["Command Center", (D.org ? D.org.name + " · " + D.org.territory : "")],
     cases:     ["Срокове & cases", "Expedited reporting"],
     signals:   ["Signal review", "Benefit-risk overview"],
+    psur:      ["Периодични доклади", "PSUR/PBRER · GVP Module VII"],
     psmf:      ["PSMF", "Pharmacovigilance System Master File"],
     sops:      ["SOP & обучения", "Document control"],
     vendors:   ["Vendor oversight", "Подизпълнители & SDEA"],
+    audits:    ["Самоинспекции & CAPA", "GVP Module IV · вътрешен одит"],
     inspect:   ["Inspection package", "Готовност за инспекция"],
-    assistant: ["QPPV Assistant", "Питай документите си"]
+    assistant: ["QPPV Assistant", "Питай документите си"],
+    analytics: ["Анализи", "KPI тенденции · 12 месеца"]
   };
 
   /* --- helpers --- */

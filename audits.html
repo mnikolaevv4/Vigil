@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vigil · Самоинспекции & CAPA</title>
+<link rel="stylesheet" href="assets/css/app.css">
+</head>
+<body>
+<script src="assets/data/demo-data.js"></script>
+<script src="assets/js/ui.js"></script>
+<script src="assets/js/app.js"></script>
+<script>
+(function(){
+  var c = Vigil.mount("audits");
+  var D = Vigil.data, H = Vigil.helpers;
+
+  var insp = D.selfInspections.map(function(a){ return Object.assign({}, a); });
+  var capa = D.capaRegister.map(function(a){ return Object.assign({}, a); });
+  var capaFilter = "all";
+
+  function isOpen(a){ return a.status.cls !== "t-green"; }
+  function kpis(){
+    var open = capa.filter(isOpen);
+    var overdue = open.filter(function(a){ return a.due.cls==="over"; });
+    var onTrack = insp.filter(function(a){ return a.next.cls!=="over"; }).length;
+    var findings = insp.reduce(function(s,a){ return s+a.findings; }, 0);
+    return '<div class="kpis">'+
+      '<div class="kpi"><div class="k-top"><span class="k-lbl">Отворени CAPA</span></div>'+
+        '<div class="k-num" style="color:'+(overdue.length?'var(--red)':'')+'">'+open.length+'</div>'+
+        '<div class="k-foot"><span class="dot '+(overdue.length?'r':'g')+'"></span>'+overdue.length+' просрочени</div></div>'+
+      '<div class="kpi"><div class="k-top"><span class="k-lbl">Самоинспекции в срок</span></div>'+
+        '<div class="k-num">'+onTrack+'/'+insp.length+'</div>'+
+        '<div class="k-foot"><span class="dot '+(onTrack===insp.length?'g':'a')+'"></span>годишен план</div></div>'+
+      '<div class="kpi"><div class="k-top"><span class="k-lbl">Findings (12 мес.)</span></div>'+
+        '<div class="k-num">'+findings+'</div>'+
+        '<div class="k-foot"><span class="dot g"></span>повечето затворени</div></div>'+
+      '<div class="kpi"><div class="k-top"><span class="k-lbl">Средно затваряне CAPA</span></div>'+
+        '<div class="k-num">18<span style="font-size:1.1rem;color:#9fb2d4"> дни</span></div>'+
+        '<div class="k-foot"><span class="dot g"></span>цел: &lt;30 дни</div></div>'+
+    '</div>';
+  }
+
+  function renderInsp(){
+    document.getElementById("inspbody").innerHTML = insp.map(function(a,i){
+      return '<tr class="clickable" data-i="'+i+'"><td>'+a.area+'</td><td class="mono">'+a.last+'</td>'+
+        '<td>'+H.due(a.next)+'</td><td class="mono">'+a.findings+'</td><td>'+H.tag(a.status)+'</td></tr>';
+    }).join("");
+    document.querySelectorAll("#inspbody tr.clickable").forEach(function(tr){
+      tr.addEventListener("click",function(){ openInsp(insp[+tr.dataset.i]); });
+    });
+  }
+
+  function matchesCapa(a){
+    if(capaFilter==="all") return true;
+    if(capaFilter==="vendor") return a.src.txt==="Vendor";
+    if(capaFilter==="sop") return a.src.txt==="SOP";
+    if(capaFilter==="self") return a.src.txt==="Self-inspection";
+    return true;
+  }
+  function renderCapa(){
+    var body = capa.map(function(a,i){
+      if(!matchesCapa(a)) return "";
+      return '<tr class="clickable" data-i="'+i+'"><td class="mono">'+a.id+'</td><td>'+H.tag(a.src)+'</td><td>'+a.desc+'</td>'+
+        '<td>'+H.whoCell(a.owner,a.ownerName)+'</td><td>'+H.due(a.due)+'</td><td>'+H.tag(a.sev)+'</td><td>'+H.tag(a.status)+'</td></tr>';
+    }).join("");
+    if(!body) body = '<tr><td colspan="7" style="color:var(--muted);text-align:center;padding:24px">Няма CAPA по този филтър.</td></tr>';
+    document.getElementById("capabody").innerHTML = body;
+    document.querySelectorAll("#capabody tr.clickable").forEach(function(tr){
+      tr.addEventListener("click",function(){ openCapa(capa[+tr.dataset.i]); });
+    });
+    document.getElementById("kpiWrap").innerHTML = kpis();
+  }
+  function capaChips(){
+    var defs=[["all","Всички"],["vendor","Vendor"],["sop","SOP"],["self","Self-inspection"]];
+    return '<div class="chips" id="capachips">'+defs.map(function(d){
+      return '<span class="chip'+(capaFilter===d[0]?" on":"")+'" data-f="'+d[0]+'">'+d[1]+'</span>';
+    }).join("")+'</div>';
+  }
+
+  c.innerHTML =
+    '<div class="section-h"><h2>Самоинспекции & CAPA регистър</h2><span class="sub">GVP Module IV · вътрешен одит на PV системата</span></div>'+
+    '<div id="kpiWrap"></div>'+
+    '<div class="grid-2" style="margin-top:18px">'+
+      '<div class="card"><div class="card-h"><h3>Програма за самоинспекции</h3></div>'+
+        '<table class="tbl"><thead><tr><th>Област</th><th>Последна</th><th>Следваща</th><th>Findings</th><th>Статус</th></tr></thead>'+
+        '<tbody id="inspbody"></tbody></table>'+
+        '<div class="empty-note" style="margin:14px">Годишен план за самоинспекция на всяка ключова област от PSMF. Findings се прехвърлят автоматично в CAPA регистъра.</div>'+
+      '</div>'+
+      '<div class="card pad" style="padding-bottom:0">'+
+        '<div class="card-h" style="padding:0 0 14px;border-bottom:1px solid var(--line)"><h3>CAPA регистър</h3><div class="spacer"></div>'+
+        '<button class="btn primary" id="btnNewCapa" style="padding:7px 12px;font-size:.78rem">+ Нова CAPA</button></div>'+
+        '<div style="padding-top:14px">'+capaChips()+'</div>'+
+        '<div style="margin:0 -18px"><table class="tbl">'+
+          '<thead><tr><th>ID</th><th>Източник</th><th>Описание</th><th>Отговорник</th><th>Срок</th><th>Тежест</th><th>Статус</th></tr></thead>'+
+          '<tbody id="capabody"></tbody></table></div>'+
+        '<div class="empty-note" style="margin:14px 0">Консолидира findings от vendor одити, SOP ревюта и самоинспекции — единен изглед за inspection package.</div>'+
+      '</div>'+
+    '</div>';
+
+  c.querySelectorAll(".chip").forEach(function(ch){
+    ch.addEventListener("click",function(){ capaFilter=ch.dataset.f; c.querySelectorAll("#capachips .chip").forEach(function(x){x.classList.toggle("on",x.dataset.f===capaFilter);}); renderCapa(); });
+  });
+
+  document.getElementById("btnNewCapa").addEventListener("click",function(){
+    UI.modal({ title:"Нова CAPA",
+      body:'<div class="field"><label>Описание</label><input id="c-desc" placeholder="напр. Закъснение в follow-up обработка"></div>'+
+        '<div class="field-row">'+
+          '<div class="field"><label>Източник</label><select id="c-src"><option>Vendor</option><option>SOP</option><option>Self-inspection</option></select></div>'+
+          '<div class="field"><label>Тежест</label><select id="c-sev"><option value="minor">minor</option><option value="major">major</option></select></div>'+
+        '</div>'+
+        '<div class="field-row">'+
+          '<div class="field"><label>Отговорник</label><select id="c-owner"><option value="ИП|И. Петров">И. Петров</option><option value="КС|К. Стоев">К. Стоев</option><option value="МД|М. Димитрова">М. Димитрова</option></select></div>'+
+          '<div class="field"><label>Дни до срок</label><input id="c-days" type="number" value="30"></div>'+
+        '</div>',
+      actions:[{label:"Отказ"},{label:"Създай",kind:"primary",onClick:function(close){
+        var desc=document.getElementById("c-desc").value||"Без описание";
+        var srcTxt=document.getElementById("c-src").value;
+        var srcCls = srcTxt==="Vendor"?"t-blue":(srcTxt==="SOP"?"t-amber":"t-red");
+        var sevVal=document.getElementById("c-sev").value;
+        var owner=document.getElementById("c-owner").value.split("|");
+        var days=parseInt(document.getElementById("c-days").value,10); if(isNaN(days))days=30;
+        var dueCls = days<0?"over":(days<=7?"soon":"ok");
+        var dueTxt = days<0?days+" дни":(days===0?"днес":"+"+days+" дни");
+        var id="CAPA-0"+(32+(capa.length-5));
+        capa.unshift({ id:id, src:{cls:srcCls,txt:srcTxt}, desc:desc, owner:owner[0], ownerName:owner[1],
+          due:{cls:dueCls,txt:dueTxt}, sev:{cls:sevVal==="major"?"t-red":"t-amber",txt:sevVal}, status:{cls:"t-red",txt:"отворена"} });
+        capaFilter="all"; c.querySelectorAll("#capachips .chip").forEach(function(x){x.classList.toggle("on",x.dataset.f==="all");});
+        renderCapa(); close();
+        UI.toast("CAPA създадена", id+" · "+srcTxt, "ok");
+        UI.flashRow(document.querySelector('#capabody tr[data-i="0"]'));
+      }}]
+    });
+  });
+
+  function openInsp(a){
+    UI.modal({ title:a.area,
+      body:'<div class="field"><label>Последна самоинспекция</label><div class="mono">'+a.last+'</div></div>'+
+        '<div class="field"><label>Следваща</label><div>'+H.due(a.next)+'</div></div>'+
+        '<div class="field"><label>Findings</label><div class="mono">'+a.findings+'</div></div>'+
+        '<div class="field"><label>Статус</label><div>'+H.tag(a.status)+'</div></div>',
+      actions:[{label:"Затвори"},{label:"Маркирай завършена",kind:"primary",onClick:function(close){
+        a.last=new Date().toISOString().slice(0,10); a.next={cls:"ok",txt:"+180 дни"}; a.findings=0; a.status={cls:"t-green",txt:"чисто"};
+        renderInsp(); renderCapa(); close();
+        UI.toast("Самоинспекция завършена", a.area+" · следваща +180 дни", "ok");
+      }}]
+    });
+  }
+
+  function openCapa(a){
+    UI.drawer({ title:a.id,
+      body:'<div class="field"><label>Източник</label><div>'+H.tag(a.src)+'</div></div>'+
+        '<div class="field"><label>Описание</label><div style="font-size:.88rem">'+a.desc+'</div></div>'+
+        '<div class="field"><label>Отговорник</label>'+H.whoCell(a.owner,a.ownerName)+'</div>'+
+        '<div class="field"><label>Срок</label><div>'+H.due(a.due)+'</div></div>'+
+        '<div class="field"><label>Тежест</label><div>'+H.tag(a.sev)+'</div></div>'+
+        '<div class="field"><label>Статус</label><div>'+H.tag(a.status)+'</div></div>'+
+        '<button class="btn primary" id="closeCapa" style="width:100%;margin-top:12px;justify-content:center">Затвори CAPA</button>',
+      onMount:function(ov,close){
+        ov.querySelector("#closeCapa").addEventListener("click",function(){
+          a.status={cls:"t-green",txt:"затворена"}; a.due={cls:"ok",txt:"затворена"};
+          renderCapa(); close();
+          UI.toast("CAPA затворена", a.id+" · "+a.desc, "ok");
+        });
+      }
+    });
+  }
+
+  renderInsp(); renderCapa();
+})();
+</script>
+</body>
+</html>

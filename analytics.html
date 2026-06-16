@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vigil · Анализи</title>
+<link rel="stylesheet" href="assets/css/app.css">
+</head>
+<body>
+<script src="assets/data/demo-data.js"></script>
+<script src="assets/js/ui.js"></script>
+<script src="assets/js/app.js"></script>
+<script>
+(function(){
+  var c = Vigil.mount("analytics");
+  var D = Vigil.data, A = D.analytics;
+
+  var avgTimeliness = Math.round(A.timeliness.reduce(function(s,v){return s+v;},0)/A.timeliness.length);
+  var openCapa = D.capaRegister.filter(function(x){ return x.status.cls!=="t-green"; }).length;
+  var onTrackInsp = D.selfInspections.filter(function(x){ return x.next.cls!=="over"; }).length;
+  var lastTraining = A.trainingCompletion[A.trainingCompletion.length-1];
+
+  var kpis =
+    '<div class="kpis">'+
+      '<div class="kpi"><div class="k-top"><span class="k-lbl">On-time reporting (12 мес.)</span></div>'+
+        '<div class="k-num" style="color:var(--green)">'+avgTimeliness+'<span style="font-size:1.1rem;color:#9fb2d4">%</span></div>'+
+        '<div class="k-foot"><span class="dot g"></span>среден за периода</div></div>'+
+      '<div class="kpi"><div class="k-top"><span class="k-lbl">Отворени CAPA</span></div>'+
+        '<div class="k-num" style="color:var(--red)">'+openCapa+'</div>'+
+        '<div class="k-foot"><span class="dot r"></span>виж audits</div></div>'+
+      '<div class="kpi"><div class="k-top"><span class="k-lbl">Самоинспекции в срок</span></div>'+
+        '<div class="k-num">'+onTrackInsp+'/'+D.selfInspections.length+'</div>'+
+        '<div class="k-foot"><span class="dot '+(onTrackInsp===D.selfInspections.length?'g':'a')+'"></span>годишен план</div></div>'+
+      '<div class="kpi"><div class="k-top"><span class="k-lbl">Обучения завършени</span></div>'+
+        '<div class="k-num" style="color:var(--green)">'+lastTraining+'<span style="font-size:1.1rem;color:#9fb2d4">%</span></div>'+
+        '<div class="k-foot"><span class="dot g"></span>текущ месец</div></div>'+
+    '</div>';
+
+  var timelinessChart = UI.sparkline({
+    values: A.timeliness, color: "#234ed8", suffix: "%",
+    labelLeft: A.months[0], labelRight: A.months[A.months.length-1],
+    aria: "Тенденция на навременно отчитане"
+  });
+
+  var caseVolumeChart = UI.barsChart({
+    categories: A.months,
+    series: [
+      { name: "сериозни", color: "#a8261f", values: A.caseVolume.serious },
+      { name: "останали",  color: "#1f5fa5", values: A.caseVolume.nonSerious }
+    ],
+    aria: "Обем на случаите по месеци"
+  });
+
+  var capaAgingChart = UI.barsChart({
+    categories: A.capaAging.map(function(b){ return b.label; }),
+    series: [{ name: "CAPA", color: "#b9700a", values: A.capaAging.map(function(b){ return b.n; }) }],
+    aria: "Възраст на отворените CAPA"
+  });
+
+  var trainingChart = UI.sparkline({
+    values: A.trainingCompletion, color: "#1c6b4a", suffix: "%",
+    labelLeft: A.months[0], labelRight: A.months[A.months.length-1],
+    aria: "Тенденция на завършени обучения"
+  });
+
+  var vendorRows = D.vendors.map(function(v){
+    var pct = parseInt(v.kpi.txt, 10) || 0;
+    var cls = pct>=95 ? "" : (pct>=85 ? "part" : "bad");
+    return '<div class="kpi-row"><span class="nm">'+v.name+'</span>'+
+      '<span class="mini-track"><i class="'+cls+'" style="width:'+pct+'%"></i></span>'+
+      '<span class="val">'+pct+'%</span></div>';
+  }).join("");
+
+  c.innerHTML =
+    '<div class="section-h"><h2>Анализи</h2><span class="sub">KPI тенденции · последните 12 месеца</span></div>'+
+    kpis+
+    '<div class="grid-2-even" style="margin-top:18px">'+
+      '<div class="card pad"><div class="card-h" style="padding:0 0 14px;border-bottom:1px solid var(--line)">'+
+        '<h3>Навременно отчитане</h3><div class="spacer"></div><span class="tag-mini t-green">GVP Module VI</span></div>'+
+        '<div style="margin-top:12px">'+timelinessChart+'</div>'+
+        '<p style="font-size:.8rem;color:var(--ink-soft);margin-top:8px">Процент ICSR, подадени в рамките на регулаторния срок (15-дневен / 90-дневен).</p>'+
+      '</div>'+
+      '<div class="card pad"><div class="card-h" style="padding:0 0 14px;border-bottom:1px solid var(--line)">'+
+        '<h3>Обем на случаите</h3><div class="spacer"></div><span class="tag-mini t-blue">по месеци</span></div>'+
+        '<div style="margin-top:12px">'+caseVolumeChart+'</div>'+
+        '<p style="font-size:.8rem;color:var(--ink-soft);margin-top:8px"><span style="color:#a8261f">■</span> сериозни &nbsp; <span style="color:#1f5fa5">■</span> останали</p>'+
+      '</div>'+
+    '</div>'+
+    '<div class="grid-2" style="margin-top:18px">'+
+      '<div class="card"><div class="card-h"><h3>Vendor KPI преглед</h3></div>'+
+        '<div class="pad" style="padding-top:6px">'+vendorRows+'</div></div>'+
+      '<div class="card pad"><div class="card-h" style="padding:0 0 14px;border-bottom:1px solid var(--line)">'+
+        '<h3>Възраст на отворени CAPA</h3></div>'+
+        '<div style="margin-top:12px">'+capaAgingChart+'</div>'+
+      '</div>'+
+    '</div>'+
+    '<div class="card pad" style="margin-top:18px"><div class="card-h" style="padding:0 0 14px;border-bottom:1px solid var(--line)">'+
+      '<h3>Завършени обучения</h3><div class="spacer"></div><span class="tag-mini t-amber">training matrix</span></div>'+
+      '<div style="margin-top:12px;max-width:620px">'+trainingChart+'</div>'+
+    '</div>'+
+    '<div class="empty-note">Демонстрационни тенденции за последните 12 месеца. В реалния продукт данните идват директно от Cases, Vendor oversight, Audits и SOP модулите — нищо не се въвежда ръчно тук.</div>';
+})();
+</script>
+</body>
+</html>

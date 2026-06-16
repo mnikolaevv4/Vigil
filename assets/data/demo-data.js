@@ -112,5 +112,44 @@ window.VIGIL_DATA = {
     "Reporting compliance отчет (12 мес.)",
     "Signal tracking log",
     "Audit trail manifest (хешове)"
-  ]
+  ],
+
+  psurs: [
+    { product: "Cardiq",   freq: "годишен (EURD)", dlp: "2026-05-15", due: { cls: "soon", txt: "+4 дни" },   status: { cls: "t-blue", txt: "в подготовка" }, who: "МД", whoName: "М. Димитрова" },
+    { product: "Neuventa", freq: "годишен (EURD)", dlp: "2026-08-20", due: { cls: "ok",   txt: "+95 дни" },  status: { cls: "t-gray", txt: "не стартиран" },  who: "КС", whoName: "К. Стоев" },
+    { product: "Respira",  freq: "на 3 години",     dlp: "2027-01-10", due: { cls: "ok",   txt: "+210 дни" }, status: { cls: "t-gray", txt: "не стартиран" },  who: "ИП", whoName: "И. Петров" },
+    { product: "Glycor",   freq: "годишен (EURD)", dlp: "2026-03-01", due: { cls: "ok",   txt: "подаден" },   status: { cls: "t-green", txt: "одобрен" },      who: "МД", whoName: "М. Димитрова" }
+  ],
+
+  selfInspections: [
+    { area: "Case processing & ICSR",      last: "2025-09-12", next: { cls: "soon", txt: "+18 дни" }, findings: 2, status: { cls: "t-amber", txt: "finding в CAPA" } },
+    { area: "Signal management",            last: "2025-11-03", next: { cls: "ok",   txt: "+64 дни" }, findings: 0, status: { cls: "t-green", txt: "чисто" } },
+    { area: "PSMF поддръжка",               last: "2026-01-20", next: { cls: "ok",   txt: "+128 дни" }, findings: 1, status: { cls: "t-green", txt: "CAPA затворена" } },
+    { area: "Vendor oversight",             last: "2025-06-18", next: { cls: "over", txt: "−9 дни" },  findings: 3, status: { cls: "t-red",   txt: "просрочена" } },
+    { area: "Training & document control",  last: "2026-02-02", next: { cls: "ok",   txt: "+146 дни" }, findings: 0, status: { cls: "t-green", txt: "чисто" } }
+  ],
+
+  capaRegister: [
+    { id: "CAPA-031", src: { cls: "t-blue", txt: "Vendor" }, desc: "PharmaDist — забавени KPI отчети",            owner: "КС", ownerName: "К. Стоев",     due: { cls: "over", txt: "−6 дни" },  sev: { cls: "t-red",   txt: "major" }, status: { cls: "t-red",   txt: "отворена" } },
+    { id: "CAPA-030", src: { cls: "t-blue", txt: "Vendor" }, desc: "PharmaDist — одит дължим / SDEA преглед",     owner: "КС", ownerName: "К. Стоев",     due: { cls: "soon", txt: "+5 дни" },  sev: { cls: "t-amber", txt: "minor" }, status: { cls: "t-amber", txt: "в прогрес" } },
+    { id: "CAPA-019", src: { cls: "t-blue", txt: "Vendor" }, desc: "Lege CRO — case processing над SLA",          owner: "ИП", ownerName: "И. Петров",    due: { cls: "ok",   txt: "+12 дни" }, sev: { cls: "t-amber", txt: "minor" }, status: { cls: "t-blue",  txt: "проверка" } },
+    { id: "CAPA-025", src: { cls: "t-red",  txt: "Self-inspection" }, desc: "Vendor oversight одит — finding адресиран", owner: "МД", ownerName: "М. Димитрова", due: { cls: "ok", txt: "затворена" }, sev: { cls: "t-amber", txt: "minor" }, status: { cls: "t-green", txt: "затворена" } },
+    { id: "CAPA-017", src: { cls: "t-amber", txt: "SOP" }, desc: "SOP-014 — несъответствие при follow-up полета", owner: "КС", ownerName: "К. Стоев",     due: { cls: "ok",   txt: "затворена" },  sev: { cls: "t-amber", txt: "minor" }, status: { cls: "t-green", txt: "затворена" } }
+  ],
+
+  analytics: {
+    months: ["юли","авг","сеп","окт","ное","дек","яну","фев","мар","апр","май","юни"],
+    timeliness: [95,96,94,97,93,95,98,96,97,99,96,97],
+    caseVolume: {
+      serious:    [3,4,3,5,4,4,6,5,4,6,5,5],
+      nonSerious: [7,8,7,9,8,9,8,9,10,9,10,9]
+    },
+    trainingCompletion: [78,80,79,82,81,83,85,84,86,88,87,92],
+    capaAging: [
+      { label: "0–30 дни",  n: 1 },
+      { label: "31–60 дни", n: 1 },
+      { label: "61–90 дни", n: 1 },
+      { label: "90+ дни",   n: 0 }
+    ]
+  }
 };
